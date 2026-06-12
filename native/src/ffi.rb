@@ -43,6 +43,7 @@ module LIBINPUT
   ffi_func :libinput_event_gesture_get_scale, [:ptr], :double
   ffi_func :libinput_event_gesture_get_angle_delta, [:ptr], :double
   ffi_func :libinput_event_gesture_get_cancelled, [:ptr], :int
+  ffi_func :libinput_event_gesture_get_time, [:ptr], :uint32
 
   # Device
   ffi_func :libinput_device_get_name, [:ptr], :str
