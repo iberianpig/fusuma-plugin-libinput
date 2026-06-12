@@ -19,7 +19,13 @@ Gem::Specification.new do |spec|
   spec.homepage = "https://github.com/iberianpig/fusuma-plugin-libinput"
   spec.license = "MIT"
 
-  spec.files = Dir["{bin,lib,exe,native,tools}/**/*", "LICENSE*", "README*", "*.gemspec"]
+  # Ship sources (lib + native/tools C/Ruby) but not build artifacts or
+  # compiled binaries.
+  spec.files = Dir[
+    "{bin,lib,exe}/**/*",
+    "native/Makefile", "native/src/**/*", "tools/*.c",
+    "LICENSE*", "README*", "*.gemspec"
+  ]
   spec.bindir = "exe"
   spec.executables = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]

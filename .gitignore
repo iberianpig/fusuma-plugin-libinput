@@ -2,3 +2,4 @@ native/build/
 tools/fake_touchpad
 *.gem
 *.o
+Gemfile.lock
