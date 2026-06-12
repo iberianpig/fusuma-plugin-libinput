@@ -9,24 +9,30 @@ module Fusuma
       # binary (a spinel-compiled libinput reader) as JSON Lines, spawned
       # as a subprocess and read line-by-line.
       #
-      # Opt-in: fusuma instantiates every installed input plugin and calls
-      # #io on each, so this plugin stays dormant unless the user sets
+      # Opt-in: this input stays disabled unless the user sets
       #
       #   plugin:
       #     inputs:
       #       libinput_events_input:
-      #         enable: true
+      #         enabled: true
       #
-      # When dormant (not enabled, or the binary can't be found) it returns
-      # a reader that never produces events, leaving fusuma's bundled
-      # libinput_command_input to handle gestures.
+      # so installing the gem doesn't change behavior until configured.
+      # When enabled but the binary can't be found, #io returns a reader
+      # that never produces events (and warns), rather than crashing.
+      #
+      # To avoid duplicate gestures, also disable the bundled CLI input:
+      #
+      #   plugin:
+      #     inputs:
+      #       libinput_command_input:
+      #         enabled: false
       class LibinputEventsInput < Input
         DEFAULT_EXECUTABLE = "fusuma-libinput-events"
 
         #: () -> Hash[Symbol, Array[Class]]
         def config_param_types
           {
-            enable: [TrueClass, FalseClass],
+            enabled: [TrueClass, FalseClass],
             executable: [String],
             seat: [String],
             "keep-device": [String],
@@ -36,13 +42,19 @@ module Fusuma
           }
         end
 
+        # Opt out by default: unlike most inputs this one is only active
+        # when explicitly enabled (the bundled libinput_command_input
+        # already provides gestures out of the box).
+        #: () -> bool
+        def enabled?
+          config_params(:enabled) == true
+        end
+
         # @return [IO]
         def io
-          @io ||= if enabled?
+          @io ||= begin
             path = resolve_executable
             path ? spawn_reader(path) : dormant("'#{configured_executable}' not found")
-          else
-            dormant("not enabled")
           end
         end
 
@@ -56,11 +68,6 @@ module Fusuma
         end
 
         private
-
-        #: () -> bool
-        def enabled?
-          config_params(:enable) == true
-        end
 
         # @return [IO] the pipe reader for the spawned binary
         def spawn_reader(path)
