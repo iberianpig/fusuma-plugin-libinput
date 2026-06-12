@@ -4,19 +4,20 @@
 # gesture and device events as JSON Lines on stdout (one JSON object per
 # line). Logs and human-readable hints go to stderr.
 #
-# Phase 1: hello + gesture + device + fatal lines. CLI options and
-# device muting come in Phase 2.
-
 require_relative "ffi"
 require_relative "constants"
+require_relative "options"
 require_relative "json_writer"
 require_relative "gesture_event"
 require_relative "device_event"
 require_relative "event_loop"
 
+opts = Options.new
+opts.parse
+
 SHIM.shim_setup
 
-li = SHIM.shim_libinput_create("seat0")
+li = SHIM.shim_libinput_create(opts.seat)
 if li == nil
   puts "{\"v\":1,\"type\":\"fatal\",\"message\":\"libinput_udev_assign_seat failed: seat0\"}"
   SHIM.shim_flush
@@ -29,6 +30,6 @@ puts "{\"v\":1,\"type\":\"hello\",\"app\":\"" + Const::APP_NAME +
   "\",\"version\":\"" + Const::APP_VERSION + "\"}"
 SHIM.shim_flush
 
-EventLoop.new(li).run
+EventLoop.new(li, opts).run
 
 LIBINPUT.libinput_unref(li)

@@ -36,6 +36,16 @@ class DeviceEvent
   end
 
   #: () -> String
+  def name
+    @name
+  end
+
+  #: () -> bool
+  def gesture_capable?
+    has_cap(Const::CAP_GESTURE)
+  end
+
+  #: () -> String
   def to_line
     status = @added ? "added" : "removed"
     out = "{\"v\":1,\"type\":\"device\""
