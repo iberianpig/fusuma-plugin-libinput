@@ -1,0 +1,4 @@
+plugin:
+  inputs:
+    libinput_events_input:
+      enable: false
