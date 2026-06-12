@@ -25,20 +25,38 @@ module Fusuma
           path
         end
 
-        describe "#enabled?" do
+        # Class-level: fusuma checks enabled? before instantiation, so a
+        # disabled input's #initialize (and any side effects) never runs.
+        describe ".enabled?" do
+          require "tempfile"
+
+          def with_config(yaml)
+            file = Tempfile.new(["fusuma-libinput", ".yml"])
+            file.write(yaml)
+            file.close
+            Fusuma::Config.custom_path = file.path
+            yield
+          ensure
+            Fusuma::Config.custom_path = nil
+            file.unlink
+          end
+
           it "is disabled by default (opt-in)" do
-            stub_config({})
-            expect(input.enabled?).to be false
+            with_config("plugin:\n  inputs:\n    libinput_events_input:\n      executable: x\n") do
+              expect(described_class.enabled?).to be false
+            end
           end
 
           it "is disabled when enabled: false" do
-            stub_config(enabled: false)
-            expect(input.enabled?).to be false
+            with_config("plugin:\n  inputs:\n    libinput_events_input:\n      enabled: false\n") do
+              expect(described_class.enabled?).to be false
+            end
           end
 
           it "is enabled when enabled: true" do
-            stub_config(enabled: true)
-            expect(input.enabled?).to be true
+            with_config("plugin:\n  inputs:\n    libinput_events_input:\n      enabled: true\n") do
+              expect(described_class.enabled?).to be true
+            end
           end
         end
 

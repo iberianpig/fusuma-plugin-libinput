@@ -45,9 +45,16 @@ module Fusuma
         # Opt out by default: unlike most inputs this one is only active
         # when explicitly enabled (the bundled libinput_command_input
         # already provides gestures out of the box).
+        #
+        # Class method, checked by fusuma before instantiation. The config
+        # lookup is self-contained (rather than using the core's
+        # config_enabled helper) so this gem also loads under fusuma
+        # versions without per-input enable support — there enabled? is
+        # simply never called.
         #: () -> bool
-        def enabled?
-          config_params(:enabled) == true
+        def self.enabled?
+          index = Config::Index.new(name.gsub("Fusuma::", "").underscore.split("/"))
+          Config.instance.fetch_config_params(:enabled, index).fetch(:enabled, nil) == true
         end
 
         # @return [IO]
