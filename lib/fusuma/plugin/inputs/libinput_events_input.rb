@@ -9,23 +9,22 @@ module Fusuma
       # binary (a spinel-compiled libinput reader) as JSON Lines, spawned
       # as a subprocess and read line-by-line.
       #
-      # Opt-in: this input stays disabled unless the user sets
+      # Zero-config: this gem ships defaults (libinput_events_input.yml)
+      # that enable this input and point gesture_buffer at
+      # libinput_jsonl_parser, so installing the gem (with a built binary
+      # on PATH) makes the events path active without editing config.yml.
+      #
+      # Opt out to the bundled CLI input by setting in config.yml:
       #
       #   plugin:
-      #     inputs:
-      #       libinput_events_input:
-      #         enabled: true
+      #     buffers:
+      #       gesture_buffer:
+      #         source: libinput_gesture_parser
       #
-      # so installing the gem doesn't change behavior until configured.
       # When enabled but the binary can't be found, #io returns a reader
-      # that never produces events (and warns), rather than crashing.
-      #
-      # To avoid duplicate gestures, also disable the bundled CLI input:
-      #
-      #   plugin:
-      #     inputs:
-      #       libinput_command_input:
-      #         enabled: false
+      # that never produces events (and warns). Note: because the gem
+      # default points gesture_buffer at the events path, a missing binary
+      # means no gestures until it is built or the opt-out above is set.
       class LibinputEventsInput < Input
         DEFAULT_EXECUTABLE = "fusuma-libinput-events"
 
