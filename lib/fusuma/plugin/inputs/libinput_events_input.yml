@@ -1,4 +1,9 @@
 plugin:
   inputs:
-    libinput_events_input:
+    libinput_command_input:
       enabled: false
+    libinput_events_input:
+      enabled: true
+  buffers:
+    gesture_buffer:
+      source: libinput_jsonl_parser
