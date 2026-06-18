@@ -3,3 +3,6 @@ tools/fake_touchpad
 *.gem
 *.o
 Gemfile.lock
+
+# superpowers working docs (spec/plan) are kept locally, not committed
+docs/superpowers/
