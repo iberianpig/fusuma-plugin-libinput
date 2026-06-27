@@ -41,9 +41,13 @@ module Fusuma
           }
         end
 
-        # Opt out by default: unlike most inputs this one is only active
-        # when explicitly enabled (the bundled libinput_command_input
-        # already provides gestures out of the box).
+        # Enabled by default: the gem ships enabled: true in its default
+        # config (libinput_events_input.yml), so the events path is active
+        # out of the box. Users opt out by setting enabled: false.
+        #
+        # The check is strict (== true, not != false) on purpose: if the
+        # default config is somehow not loaded, fall back to disabled
+        # rather than spawning the binary unbidden.
         #
         # Class method, checked by fusuma before instantiation. The config
         # lookup is self-contained (rather than using the core's
