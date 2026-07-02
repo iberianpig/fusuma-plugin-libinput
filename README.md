@@ -72,11 +72,17 @@ swipe:
 
 ### Opting out (back to the bundled CLI input)
 
-To use the bundled `libinput_command_input` instead, point the gesture
-buffer back at its parser in `~/.config/fusuma/config.yml`:
+The gem defaults disable `libinput_command_input` and enable this input,
+so to switch back you re-enable the CLI input, disable this one, and point
+the gesture buffer at its parser in `~/.config/fusuma/config.yml`:
 
 ```yaml
 plugin:
+  inputs:
+    libinput_command_input:
+      enabled: true    # override the gem default (which disables it)
+    libinput_events_input:
+      enabled: false   # stop the events binary
   buffers:
     gesture_buffer:
       source: libinput_gesture_parser
@@ -85,10 +91,10 @@ plugin:
 If you run other plugins that also inject `gesture_buffer.source`, set it
 explicitly in your `config.yml` to make the winner unambiguous.
 
-> Stopping the bundled input's process entirely (`libinput_command_input.enabled: false`,
-> shipped as a gem default) requires a Fusuma version with per-input enable
-> support. Without it the process keeps running, but the gesture buffer
-> ignores it (single source), so there is no double-detection.
+> The `enabled:` flags take effect on Fusuma versions with per-input enable
+> support; on older versions they are harmless no-ops, but the single
+> `gesture_buffer.source` still routes gestures through the CLI parser, so
+> there is no double-detection either way.
 
 ### Binary CLI options
 

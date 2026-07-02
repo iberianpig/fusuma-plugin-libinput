@@ -13,14 +13,15 @@ module Fusuma
         # Load the given yaml as user config (on top of the gem's
         # plugin_defaults) for the duration of the block.
         def with_config(yaml)
+          previous_path = Fusuma::Config.instance.custom_path
           file = Tempfile.new(["fusuma-libinput", ".yml"])
           file.write(yaml)
           file.close
           Fusuma::Config.custom_path = file.path
           yield
         ensure
-          Fusuma::Config.custom_path = nil
-          file.unlink
+          Fusuma::Config.custom_path = previous_path
+          file&.unlink
         end
 
         # Stub config_params to return values from the given hash, nil
@@ -134,6 +135,24 @@ module Fusuma
           it "lets user config override gesture_buffer.source (opt-out)" do
             yaml = "plugin:\n  buffers:\n    gesture_buffer:\n      source: libinput_gesture_parser\n"
             with_config(yaml) do
+              expect(gesture_buffer_source).to eq "libinput_gesture_parser"
+            end
+          end
+
+          it "disables this input under the full opt-out config" do
+            yaml = <<~CONFIG
+              plugin:
+                inputs:
+                  libinput_command_input:
+                    enabled: true
+                  libinput_events_input:
+                    enabled: false
+                buffers:
+                  gesture_buffer:
+                    source: libinput_gesture_parser
+            CONFIG
+            with_config(yaml) do
+              expect(described_class.enabled?).to be false
               expect(gesture_buffer_source).to eq "libinput_gesture_parser"
             end
           end

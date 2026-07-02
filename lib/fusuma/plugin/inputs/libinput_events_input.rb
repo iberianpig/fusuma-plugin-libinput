@@ -14,9 +14,15 @@ module Fusuma
       # libinput_jsonl_parser, so installing the gem (with a built binary
       # on PATH) makes the events path active without editing config.yml.
       #
-      # Opt out to the bundled CLI input by setting in config.yml:
+      # Opt out to the bundled CLI input by re-enabling it, disabling this
+      # input, and pointing gesture_buffer back at its parser in config.yml:
       #
       #   plugin:
+      #     inputs:
+      #       libinput_command_input:
+      #         enabled: true
+      #       libinput_events_input:
+      #         enabled: false
       #     buffers:
       #       gesture_buffer:
       #         source: libinput_gesture_parser
