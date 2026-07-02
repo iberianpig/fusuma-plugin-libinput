@@ -2,12 +2,27 @@
 
 require "spec_helper"
 require "tmpdir"
+require "tempfile"
 
 module Fusuma
   module Plugin
     module Inputs
       RSpec.describe LibinputEventsInput do
         let(:input) { described_class.new }
+
+        # Load the given yaml as user config (on top of the gem's
+        # plugin_defaults) for the duration of the block.
+        def with_config(yaml)
+          previous_path = Fusuma::Config.instance.custom_path
+          file = Tempfile.new(["fusuma-libinput", ".yml"])
+          file.write(yaml)
+          file.close
+          Fusuma::Config.custom_path = file.path
+          yield
+        ensure
+          Fusuma::Config.custom_path = previous_path
+          file&.unlink
+        end
 
         # Stub config_params to return values from the given hash, nil
         # otherwise (mirroring fusuma's config lookup).
@@ -28,22 +43,9 @@ module Fusuma
         # Class-level: fusuma checks enabled? before instantiation, so a
         # disabled input's #initialize (and any side effects) never runs.
         describe ".enabled?" do
-          require "tempfile"
-
-          def with_config(yaml)
-            file = Tempfile.new(["fusuma-libinput", ".yml"])
-            file.write(yaml)
-            file.close
-            Fusuma::Config.custom_path = file.path
-            yield
-          ensure
-            Fusuma::Config.custom_path = nil
-            file.unlink
-          end
-
-          it "is disabled by default (opt-in)" do
+          it "is enabled by default (zero-config)" do
             with_config("plugin:\n  inputs:\n    libinput_events_input:\n      executable: x\n") do
-              expect(described_class.enabled?).to be false
+              expect(described_class.enabled?).to be true
             end
           end
 
@@ -115,6 +117,44 @@ module Fusuma
           it "declares enabled and the CLI options" do
             expect(input.config_param_types.keys)
               .to include(:enabled, :executable, :seat, :"keep-device", :"enable-tap")
+          end
+        end
+
+        describe "gem default config injection" do
+          def gesture_buffer_source
+            index = Fusuma::Config::Index.new([:plugin, :buffers, :gesture_buffer])
+            Fusuma::Config.instance.fetch_config_params(:source, index)[:source]
+          end
+
+          it "defaults gesture_buffer.source to libinput_jsonl_parser" do
+            with_config("plugin:\n  inputs: {}\n") do
+              expect(gesture_buffer_source).to eq "libinput_jsonl_parser"
+            end
+          end
+
+          it "lets user config override gesture_buffer.source (opt-out)" do
+            yaml = "plugin:\n  buffers:\n    gesture_buffer:\n      source: libinput_gesture_parser\n"
+            with_config(yaml) do
+              expect(gesture_buffer_source).to eq "libinput_gesture_parser"
+            end
+          end
+
+          it "disables this input under the full opt-out config" do
+            yaml = <<~CONFIG
+              plugin:
+                inputs:
+                  libinput_command_input:
+                    enabled: true
+                  libinput_events_input:
+                    enabled: false
+                buffers:
+                  gesture_buffer:
+                    source: libinput_gesture_parser
+            CONFIG
+            with_config(yaml) do
+              expect(described_class.enabled?).to be false
+              expect(gesture_buffer_source).to eq "libinput_gesture_parser"
+            end
           end
         end
       end

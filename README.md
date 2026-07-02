@@ -55,28 +55,13 @@ Smoke test (no Fusuma needed):
 
 ## Fusuma configuration
 
-This plugin is **opt-in**. Enabling it takes three changes in
-`~/.config/fusuma/config.yml`:
+With a built binary on `PATH`, this plugin is **active out of the box** —
+the gem ships defaults that enable its input and feed the gesture buffer
+from its parser. No `config.yml` changes are required for gestures to work.
+
+Configure gestures as usual:
 
 ```yaml
-plugin:
-  inputs:
-    # 1. turn off the bundled CLI input so gestures aren't detected twice
-    libinput_command_input:
-      enabled: false
-    # 2. enable this plugin's input (and point at the binary)
-    libinput_events_input:
-      enabled: true
-      executable: fusuma-libinput-events   # name on PATH, or an absolute path
-      # keep-device: "Magic Trackpad"      # optional, substring match
-      # enable-tap: true
-      # disable-dwt: true
-  buffers:
-    # 3. feed the gesture buffer from this plugin's parser
-    gesture_buffer:
-      source: libinput_jsonl_parser
-
-# gestures as usual
 swipe:
   3:
     left:
@@ -85,10 +70,31 @@ swipe:
       command: 'your-command'
 ```
 
-> `enabled: false` for inputs requires a Fusuma version with per-input
-> enable support. Without it, run this plugin only where
-> `libinput debug-events` is unavailable (so the bundled input produces
-> nothing and there is nothing to duplicate).
+### Opting out (back to the bundled CLI input)
+
+The gem defaults disable `libinput_command_input` and enable this input,
+so to switch back you re-enable the CLI input, disable this one, and point
+the gesture buffer at its parser in `~/.config/fusuma/config.yml`:
+
+```yaml
+plugin:
+  inputs:
+    libinput_command_input:
+      enabled: true    # override the gem default (which disables it)
+    libinput_events_input:
+      enabled: false   # stop the events binary
+  buffers:
+    gesture_buffer:
+      source: libinput_gesture_parser
+```
+
+If you run other plugins that also inject `gesture_buffer.source`, set it
+explicitly in your `config.yml` to make the winner unambiguous.
+
+> The `enabled:` flags take effect on Fusuma versions with per-input enable
+> support; on older versions they are harmless no-ops, but the single
+> `gesture_buffer.source` still routes gestures through the CLI parser, so
+> there is no double-detection either way.
 
 ### Binary CLI options
 

@@ -9,23 +9,28 @@ module Fusuma
       # binary (a spinel-compiled libinput reader) as JSON Lines, spawned
       # as a subprocess and read line-by-line.
       #
-      # Opt-in: this input stays disabled unless the user sets
+      # Zero-config: this gem ships defaults (libinput_events_input.yml)
+      # that enable this input and point gesture_buffer at
+      # libinput_jsonl_parser, so installing the gem (with a built binary
+      # on PATH) makes the events path active without editing config.yml.
       #
-      #   plugin:
-      #     inputs:
-      #       libinput_events_input:
-      #         enabled: true
-      #
-      # so installing the gem doesn't change behavior until configured.
-      # When enabled but the binary can't be found, #io returns a reader
-      # that never produces events (and warns), rather than crashing.
-      #
-      # To avoid duplicate gestures, also disable the bundled CLI input:
+      # Opt out to the bundled CLI input by re-enabling it, disabling this
+      # input, and pointing gesture_buffer back at its parser in config.yml:
       #
       #   plugin:
       #     inputs:
       #       libinput_command_input:
+      #         enabled: true
+      #       libinput_events_input:
       #         enabled: false
+      #     buffers:
+      #       gesture_buffer:
+      #         source: libinput_gesture_parser
+      #
+      # When enabled but the binary can't be found, #io returns a reader
+      # that never produces events (and warns). Note: because the gem
+      # default points gesture_buffer at the events path, a missing binary
+      # means no gestures until it is built or the opt-out above is set.
       class LibinputEventsInput < Input
         DEFAULT_EXECUTABLE = "fusuma-libinput-events"
 
@@ -42,9 +47,13 @@ module Fusuma
           }
         end
 
-        # Opt out by default: unlike most inputs this one is only active
-        # when explicitly enabled (the bundled libinput_command_input
-        # already provides gestures out of the box).
+        # Enabled by default: the gem ships enabled: true in its default
+        # config (libinput_events_input.yml), so the events path is active
+        # out of the box. Users opt out by setting enabled: false.
+        #
+        # The check is strict (== true, not != false) on purpose: if the
+        # default config is somehow not loaded, fall back to disabled
+        # rather than spawning the binary unbidden.
         #
         # Class method, checked by fusuma before instantiation. The config
         # lookup is self-contained (rather than using the core's
