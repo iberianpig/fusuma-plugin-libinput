@@ -32,6 +32,26 @@ extension to build on the user's machine.
   [matz/spinel](https://github.com/matz/spinel), built once
   (`make all` in the spinel repo).
 
+## Installing a released binary
+
+Prebuilt `fusuma-libinput-events` binaries for Linux x86_64 and aarch64
+are attached to each
+[GitHub Release](https://github.com/iberianpig/fusuma-plugin-libinput/releases),
+built inside `ubuntu:22.04` (glibc ≥ 2.35).
+
+```sh
+# pick the asset for your architecture (x86_64 shown; aarch64 also available)
+curl -LO https://github.com/iberianpig/fusuma-plugin-libinput/releases/latest/download/fusuma-libinput-events-x86_64-linux-gnu
+
+# verify build provenance against this repo (needs GitHub CLI >= 2.49)
+gh attestation verify fusuma-libinput-events-x86_64-linux-gnu \
+  --repo iberianpig/fusuma-plugin-libinput
+
+install -Dm755 fusuma-libinput-events-x86_64-linux-gnu ~/.local/bin/fusuma-libinput-events
+```
+
+Prefer building from source? See the next section.
+
 ## Building the binary
 
 ```sh

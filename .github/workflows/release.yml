@@ -1,0 +1,106 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+env:
+  # matz/spinel commit this project builds against. Bump together with
+  # the native/ sources whenever spinel's FFI/codegen behaviour changes.
+  SPINEL_SHA: 0cda3f993fc371c600870450b62d23d91a4c6499
+
+jobs:
+  build:
+    name: build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x86_64-linux-gnu
+            runner: ubuntu-latest
+          - platform: aarch64-linux-gnu
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    # Build inside ubuntu:22.04 to pin the glibc floor at 2.35. Building on
+    # 24.04 would emit GLIBC_2.39 references the released binary must not
+    # require. arm64 uses a native runner (free for public repos); we do
+    # not cross-compile because spinel's libspinel_rt.a is arch-specific.
+    container: ubuntu:22.04
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential curl ca-certificates git pkg-config make \
+            libinput-dev libudev-dev
+
+      - name: Check out plugin
+        uses: actions/checkout@v4
+
+      - name: Cache spinel build
+        id: spinel-cache
+        uses: actions/cache@v4
+        with:
+          path: .spinel
+          key: spinel-${{ env.SPINEL_SHA }}-${{ matrix.platform }}
+
+      - name: Build spinel
+        if: steps.spinel-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --filter=blob:none https://github.com/matz/spinel .spinel
+          git -C .spinel checkout "$SPINEL_SHA"
+          make -C .spinel deps
+          make -C .spinel -j"$(nproc)" all
+
+      - name: Build the plugin binary
+        run: make -C native SPINEL_DIR="$GITHUB_WORKSPACE/.spinel"
+
+      - name: Package and smoke-test
+        run: |
+          mkdir -p dist
+          bin="dist/fusuma-libinput-events-${{ matrix.platform }}"
+          cp native/build/fusuma-libinput-events "$bin"
+          echo "== ldd =="
+          ldd "$bin"
+          echo "== --version =="
+          "$bin" --version
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.platform }}
+          path: dist/fusuma-libinput-events-${{ matrix.platform }}
+          if-no-files-found: error
+
+  release:
+    name: release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download built binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bin-*
+          merge-multiple: true
+          path: dist
+
+      - name: Generate SHA256SUMS
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-checksums: dist/SHA256SUMS
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
